@@ -4,12 +4,13 @@ package models
 type UserType string
 
 const (
-	// UserTypeAdmin the admin, whom will handle the tickets
+	// UserTypeAdmin the admin will handle the tickets
 	UserTypeAdmin UserType = "admin"
-	// UserTypeUser, who will create the tickets
+	// UserTypeUser the one who will create the tickets
 	UserTypeUser UserType = "user"
 )
 
+// User represents a user of the application
 type User struct {
 	UserID   string   `json:"userID"`
 	Name     string   `json:"name"`
