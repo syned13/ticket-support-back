@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -56,8 +57,11 @@ func (h httpHandler) HandleSignup(ctx context.Context) http.HandlerFunc {
 			return
 		}
 
+		user.Type = models.UserTypeUser
+
 		user, err = h.service.CreateUser(ctx, user)
 		if err != nil {
+			fmt.Println("creating_user_failed: " + err.Error())
 			httputils.RespondWithError(rw, err)
 			return
 		}

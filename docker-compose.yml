@@ -1,0 +1,27 @@
+version: "3.4"
+services:
+  web:
+    environment:
+      APP_ENVIRONMENT: local
+      PORT: 5000
+      DATABASETYPE: postgres
+      DATABASE_CONNECTION: postgresql://postgres:postgres@db:5432/tickets_db?sslmode=disable
+      DATABASENAME: tickets_db
+    build:
+      context: .
+      dockerfile: .
+    depends_on:
+      - db
+    ports:
+      - 5000:5000
+  db:
+    image: postgres:10.5
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tickets_db
+    volumes:
+      - ./data:/var/lib/postgresql/data
+      - ./scripts/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    ports:
+      - 5432:5432

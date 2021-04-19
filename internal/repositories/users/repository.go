@@ -2,8 +2,14 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/syned13/ticket-support-back/internal/models"
+)
+
+var (
+	// ErrDuplicateField duplicate field
+	ErrDuplicateField = errors.New("duplicate field")
 )
 
 // Repository defines the data-persistance related methods for a user

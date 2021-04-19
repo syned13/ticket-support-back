@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -19,11 +21,26 @@ func main() {
 		log.Fatal("getting_config_failed: " + err.Error())
 	}
 
+	fmt.Println(config.DatabaseConfig.Connection)
+
 	ctx := context.Background()
 
-	pool, err := pgxpool.Connect(ctx, config.DatabaseConfig.Connection)
-	if err != nil {
-		log.Fatal("failed_connecting_to_database")
+	var pool *pgxpool.Pool
+	isConnected := false
+
+	for i := 0; i < 10; i++ {
+		pool, err = pgxpool.Connect(ctx, config.DatabaseConfig.Connection)
+		if err != nil {
+			time.Sleep(time.Second * 2)
+			continue
+		} else {
+			isConnected = true
+			break
+		}
+	}
+
+	if !isConnected {
+		log.Fatal("failed_connecting_to_database: " + err.Error())
 	}
 
 	usersRepo, err := usersRepo.New(pool)
@@ -38,4 +55,6 @@ func main() {
 	authHandler.SetupRoutes(ctx, authService, router)
 
 	fmt.Println("hello world!")
+
+	http.ListenAndServe(":"+config.Port, router)
 }

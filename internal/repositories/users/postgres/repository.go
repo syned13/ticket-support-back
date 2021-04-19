@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/syned13/ticket-support-back/internal/models"
@@ -15,6 +15,13 @@ import (
 var (
 	// ErrMissingPool missing pool
 	ErrMissingPool = errors.New("missing pool")
+)
+
+var (
+	// TODO: look for other errors and map them
+	errorCodes = map[string]error{
+		"23505": repository.ErrDuplicateField,
+	}
 )
 
 type PgxIface interface {
@@ -47,10 +54,14 @@ func (r postgresRepository) CreateUser(ctx context.Context, user models.User) (m
 	var userID sql.NullInt64
 	var createdAt sql.NullTime
 
-	err := r.pool.QueryRow(ctx, query, user.Name, user.Password, user.Type).Scan(&userID, &createdAt)
+	err := r.pool.QueryRow(ctx, query, user.Name, user.Email, user.Password, user.Type).Scan(&userID, &createdAt)
+	if pgErr, ok := err.(*pgconn.PgError); ok {
+		if _, ok := errorCodes[pgErr.Code]; ok {
+			return models.User{}, errorCodes[pgErr.Code]
+		}
+	}
+
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println(err.Error())
 		// TODO: handle postgres specific errors
 		return models.User{}, err
 	}

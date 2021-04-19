@@ -17,6 +17,8 @@ var (
 	ErrMissingPassword = httputils.NewBadRequestError("missing password")
 	// ErrMissingEmail missing email
 	ErrMissingEmail = httputils.NewBadRequestError("missing email")
+	// ErrDuplicateFields duplicate fields
+	ErrDuplicateFields = httputils.NewBadRequestError("duplicate fields")
 	// ErrMissingType missing type
 	ErrMissingType = errors.New("missing type")
 	// ErrInvalidType invalid type
@@ -57,6 +59,10 @@ func (s service) CreateUser(ctx context.Context, user models.User) (models.User,
 	user.Password = string(hashedPassword)
 
 	createdUser, err := s.repo.CreateUser(ctx, user)
+	if errors.Is(err, usersRepo.ErrDuplicateField) {
+		return models.User{}, ErrDuplicateFields
+	}
+
 	if err != nil {
 		return models.User{}, err
 	}
