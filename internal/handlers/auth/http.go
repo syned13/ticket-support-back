@@ -17,7 +17,7 @@ type httpHandler struct {
 	service authService.Service
 }
 
-func SetupRoutes(ctx context.Context, service authService.Service, router mux.Router) {
+func SetupRoutes(ctx context.Context, service authService.Service, router *mux.Router) {
 	handler := httpHandler{service: service}
 
 	router.HandleFunc("/login", handler.HandleLogin(ctx)).Methods(http.MethodPost)
