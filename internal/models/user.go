@@ -12,6 +12,11 @@ const (
 	UserTypeUser UserType = "user"
 )
 
+var validUserTypes = map[UserType]bool{
+	UserTypeAdmin: true,
+	UserTypeUser:  true,
+}
+
 // User represents a user of the application
 type User struct {
 	UserID   int64     `json:"userID"`
@@ -20,4 +25,9 @@ type User struct {
 	Password string    `json:"password"`
 	Type     UserType  `json:"userType"`
 	CreateAt time.Time `json:"createdAt"`
+}
+
+// HasValidType returns whether the user has a valid type or not
+func (u User) HasValidType() bool {
+	return validUserTypes[u.Type]
 }
