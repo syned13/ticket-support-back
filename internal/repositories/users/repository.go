@@ -10,6 +10,8 @@ import (
 var (
 	// ErrDuplicateField duplicate field
 	ErrDuplicateField = errors.New("duplicate field")
+	// ErrNotFound not found
+	ErrNotFound = errors.New("not found")
 )
 
 // Repository defines the data-persistance related methods for a user

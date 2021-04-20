@@ -88,7 +88,7 @@ func (r postgresRepository) GetUser(ctx context.Context, userID int) (models.Use
 
 	user := models.User{}
 
-	err = rows.Scan(&user.UserID, &user.Name, &user.Password, &user.Type, &user.CreateAt)
+	err = rows.Scan(&user.UserID, &user.Email, &user.Name, &user.Password, &user.Type, &user.CreateAt)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -100,14 +100,14 @@ func (r postgresRepository) GetUser(ctx context.Context, userID int) (models.Use
 func (r postgresRepository) GetUserByEmail(ctx context.Context, email string) (models.User, error) {
 	query := `SELECT * FROM users WHERE email = $1`
 
-	rows, err := r.pool.Query(ctx, query, email)
-	if err != nil {
-		return models.User{}, err
-	}
+	rows := r.pool.QueryRow(ctx, query, email)
+	// if err != nil {
+	// 	return models.User{}, err
+	// }
 
 	user := models.User{}
 
-	err = rows.Scan(&user.UserID, &user.Name, &user.Password, &user.Type, &user.CreateAt)
+	err := rows.Scan(&user.UserID, &user.Name, &user.Email, &user.Password, &user.Type, &user.CreateAt)
 	if err != nil {
 		return models.User{}, err
 	}

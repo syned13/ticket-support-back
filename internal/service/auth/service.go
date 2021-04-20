@@ -3,11 +3,20 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/syned13/ticket-support-back/internal/models"
 	usersRepo "github.com/syned13/ticket-support-back/internal/repositories/users"
 	"github.com/syned13/ticket-support-back/pkg/httputils"
 	"golang.org/x/crypto/bcrypt"
+)
+
+const (
+	tokenSub      = "ticket-support-back"
+	tokenDuration = time.Hour * 24
 )
 
 var (
@@ -25,6 +34,10 @@ var (
 	ErrInvalidType = errors.New("invalid type")
 	// ErrPasswordHashingFailed hashing password failed
 	ErrPasswordHashingFailed = errors.New("hashing password failed")
+	// ErrInvalidCredentials invalid credentials
+	ErrInvalidCredentials = httputils.NewBadRequestError("invalid credentials")
+	// ErrGeneratingIDFailed generating id failed
+	ErrGeneratingIDFailed = errors.New("generating id failed")
 )
 
 var (
@@ -67,6 +80,8 @@ func (s service) CreateUser(ctx context.Context, user models.User) (models.User,
 		return models.User{}, err
 	}
 
+	createdUser.Password = ""
+
 	return createdUser, nil
 }
 
@@ -95,5 +110,63 @@ func validateCreateUserParams(user models.User) error {
 }
 
 func (s service) Login(ctx context.Context, email, password string) (LoginResponse, error) {
-	return LoginResponse{}, nil
+	err := validateLoginParams(email, password)
+	if err != nil {
+		return LoginResponse{}, err
+	}
+
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if errors.Is(err, usersRepo.ErrNotFound) {
+		return LoginResponse{}, ErrInvalidCredentials
+	}
+
+	if err != nil {
+		return LoginResponse{}, err
+	}
+
+	if !isPasswordCorrect(password, user.Password) {
+		return LoginResponse{}, ErrInvalidCredentials
+	}
+
+	token, err := generateToken(user)
+	if err != nil {
+		return LoginResponse{}, err
+	}
+
+	user.Password = ""
+
+	return LoginResponse{User: user, Token: token}, nil
+}
+
+func validateLoginParams(email, password string) error {
+	if email == "" {
+		return ErrMissingEmail
+	}
+
+	if password == "" {
+		return ErrMissingPassword
+	}
+
+	return nil
+}
+
+func generateToken(user models.User) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": user.UserID,
+		"iss": tokenSub,
+		"iat": time.Now(),
+		"exp": time.Now().Add(tokenDuration), // TODO: make the adding a const
+	})
+
+	signedToken, err := token.SignedString([]byte(os.Getenv("TOKEN_SECRET")))
+	if err != nil {
+		return "", fmt.Errorf("error signing token: " + err.Error())
+	}
+
+	return signedToken, nil
+}
+
+func isPasswordCorrect(enteredPassword string, storedPassword string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(enteredPassword))
+	return err == nil
 }

@@ -54,7 +54,10 @@ func main() {
 
 	authHandler.SetupRoutes(ctx, authService, router)
 
-	fmt.Println("hello world!")
+	fmt.Printf("Listeting on port :%s", config.Port)
 
-	http.ListenAndServe(":"+config.Port, router)
+	err = http.ListenAndServe(":"+config.Port, router)
+	if err != nil {
+		log.Fatal("initializing_server_failed: " + err.Error())
+	}
 }
