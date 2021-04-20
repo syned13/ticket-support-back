@@ -37,7 +37,27 @@ func SetupRoutes(ctx context.Context, service authService.Service, router *mux.R
 
 func (h httpHandler) HandleLogin(ctx context.Context) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		err := validateContentType(*r)
+		if err != nil {
+			httputils.RespondWithError(rw, err)
+			return
+		}
 
+		loginRequest := LoginRequest{}
+		err = json.NewDecoder(r.Body).Decode(&loginRequest)
+		if err != nil {
+			httputils.RespondWithError(rw, ErrInvalidBody)
+			return
+		}
+
+		loginResponse, err := h.service.Login(ctx, loginRequest.Email, loginRequest.Password)
+		if err != nil {
+			fmt.Println("login_failed: " + err.Error())
+			httputils.RespondWithError(rw, err)
+			return
+		}
+
+		httputils.RespondJSON(rw, http.StatusOK, loginResponse)
 	}
 }
 
