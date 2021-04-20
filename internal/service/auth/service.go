@@ -152,10 +152,11 @@ func validateLoginParams(email, password string) error {
 
 func generateToken(user models.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.UserID,
-		"iss": tokenSub,
-		"iat": time.Now(),
-		"exp": time.Now().Add(tokenDuration), // TODO: make the adding a const
+		"sub":      user.UserID,
+		"iss":      tokenSub,
+		"userType": user.Type,
+		"iat":      time.Now(),
+		"exp":      time.Now().Add(tokenDuration), // TODO: make the adding a const
 	})
 
 	signedToken, err := token.SignedString([]byte(os.Getenv("TOKEN_SECRET")))

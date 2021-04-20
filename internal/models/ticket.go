@@ -38,6 +38,15 @@ const (
 	TicketStatusResolved TicketStatus = "resolved"
 )
 
+type TicketPriority int
+
+const (
+	TicketPriorityLow      TicketPriority = 0
+	TicketPriorityMedium   TicketPriority = 1
+	TicketPriorityHigh     TicketPriority = 2
+	TicketPriorityVeryHigh TicketPriority = 3
+)
+
 // Ticket represents a ticket
 type Ticket struct {
 	TicketID    int64          `json:"ticketID"`
@@ -45,8 +54,10 @@ type Ticket struct {
 	Description string         `json:"description"`
 	Type        TicketType     `json:"ticketType"`
 	Severity    TicketSeverity `json:"severity"`
+	Priority    TicketPriority `json:"priority"`
 	Status      TicketStatus   `json:"status"`
 	CreatorID   int64          `json:"creatorID"`
+	OwnerID     int64          `json:"ownerID"`
 	CreatedAt   time.Time      `json:"createdAt"`
 	UpdatedAt   time.Time      `json:"updatedAt"`
 	ResolvedAt  time.Time      `json:"resolvedAt"`
