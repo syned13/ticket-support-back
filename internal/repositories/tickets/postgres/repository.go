@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgconn"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/randallmlough/pgxscan"
 	"github.com/syned13/ticket-support-back/internal/models"
@@ -41,8 +42,8 @@ func New(pool *pgxpool.Pool) (repository.Repository, error) {
 // SaveTicket saves a ticket in the database
 func (r postgresRepository) SaveTicket(ctx context.Context, ticket models.Ticket) (models.Ticket, error) {
 	query := `INSERT INTO tickets 
-				(title, description, ticket_type, severity, ticket_priority, ticket_status, creator_id, owner_id, created_at, updated_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+				(title, ticket_description, ticket_type, severity, ticket_priority, ticket_status, creator_id, created_at, updated_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
 				RETURNING id, created_at, updated_at`
 
 	var ticketID sql.NullInt64
@@ -55,8 +56,7 @@ func (r postgresRepository) SaveTicket(ctx context.Context, ticket models.Ticket
 		ticket.Severity,
 		ticket.Priority,
 		ticket.Status,
-		ticket.CreatorID,
-		ticket.OwnerID).Scan(&ticketID, &createdAt, &updatedAt)
+		ticket.CreatorID).Scan(&ticketID, &createdAt, &updatedAt)
 
 	if pgErr, ok := err.(*pgconn.PgError); ok {
 		if _, ok := errorCodes[pgErr.Code]; ok {
@@ -74,19 +74,19 @@ func (r postgresRepository) SaveTicket(ctx context.Context, ticket models.Ticket
 	}
 
 	if createdAt.Valid {
-		ticket.CreatedAt = createdAt.Time
+		ticket.CreatedAt = &createdAt.Time
 	}
 
 	if updatedAt.Valid {
-		ticket.UpdatedAt = updatedAt.Time
+		ticket.UpdatedAt = &updatedAt.Time
 	}
 
-	return models.Ticket{}, nil
+	return ticket, nil
 }
 
 // GetTicket returns a ticket from the database based on the tickeID
 func (r postgresRepository) GetTicket(ctx context.Context, ticketID int64) (models.Ticket, error) {
-	query := `SELECT * FROM tickers WHERE id = $1`
+	query := `SELECT * FROM tickets WHERE id = $1`
 
 	ticket := models.Ticket{}
 
@@ -106,7 +106,6 @@ func (r postgresRepository) GetTicket(ctx context.Context, ticketID int64) (mode
 	)
 
 	if err != nil {
-		fmt.Println(err)
 		return models.Ticket{}, err
 	}
 
@@ -115,7 +114,7 @@ func (r postgresRepository) GetTicket(ctx context.Context, ticketID int64) (mode
 
 // GetTickets returns all the tickets
 func (r postgresRepository) GetTickets(ctx context.Context, lastID int64) ([]models.Ticket, int64, error) {
-	query := `SELECT * FROM tickets WHERE lastID > $1 ORDER BY id LIMIT 10`
+	query := `SELECT * FROM tickets WHERE id > $1 ORDER BY id LIMIT 10`
 
 	rows, err := r.pool.Query(ctx, query, lastID)
 	if err != nil {
@@ -126,6 +125,10 @@ func (r postgresRepository) GetTickets(ctx context.Context, lastID int64) ([]mod
 	tickets := []models.Ticket{}
 
 	if err := pgxscan.NewScanner(rows).Scan(&tickets); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, 0, repository.ErrNotFound
+		}
+
 		return nil, 0, err
 	}
 
@@ -134,7 +137,7 @@ func (r postgresRepository) GetTickets(ctx context.Context, lastID int64) ([]mod
 
 // GetTicketsByCreator returns all the tickets made by a single person
 func (r postgresRepository) GetTicketsByCreator(ctx context.Context, creatorID int64, lastID int64) ([]models.Ticket, int64, error) {
-	query := `SELECT * FROM tickets WHERE creator_id = $1 AND lastID > $2 ORDER BY id LIMIT 10`
+	query := `SELECT * FROM tickets WHERE creator_id = $1 AND id > $2 ORDER BY id LIMIT 10`
 
 	rows, err := r.pool.Query(ctx, query, creatorID, lastID)
 	if err != nil {
@@ -145,6 +148,10 @@ func (r postgresRepository) GetTicketsByCreator(ctx context.Context, creatorID i
 	tickets := []models.Ticket{}
 
 	if err := pgxscan.NewScanner(rows).Scan(&tickets); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, 0, repository.ErrNotFound
+		}
+
 		return nil, 0, err
 	}
 

@@ -2,8 +2,14 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/syned13/ticket-support-back/internal/models"
+)
+
+var (
+	// ErrNotFound not found
+	ErrNotFound = errors.New("not found")
 )
 
 type Repository interface {
