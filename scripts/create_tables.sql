@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS users(
     created_at TIMESTAMP NOT NULL
 );
 
+INSERT INTO users 
+(name, email, password, user_type, created_at)
+VALUES ('Erica Ross', 'erica@erica.com', '$2y$12$ZPmLiyARMnzTFZuvhj42y.7PyPh5TVQfvu4IGpPFOopAs4c9rA1km', 'admin', NOW());
 
 CREATE TABLE IF NOT EXISTS tickets (
     id SERIAL PRIMARY KEY,
