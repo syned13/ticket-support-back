@@ -10,6 +10,8 @@ import (
 var (
 	// ErrNotFound not found
 	ErrNotFound = errors.New("not found")
+	// ErrNothingToUpdate nothing to update
+	ErrNothingToUpdate = errors.New("nothing to update")
 )
 
 type Repository interface {
@@ -17,5 +19,7 @@ type Repository interface {
 	GetTicket(ctx context.Context, ticketID int64) (models.Ticket, error)
 	GetTickets(ctx context.Context, lastID int64) ([]models.Ticket, int64, error)
 	GetTicketsByCreator(ctx context.Context, creatorID int64, lastID int64) ([]models.Ticket, int64, error)
-	UpdateTicket(ctx context.Context, ticket models.Ticket) ([]models.Ticket, error)
+	UpdateTicket(ctx context.Context, ticket models.Ticket) (models.Ticket, error)
+	SaveTicketChange(ctx context.Context, ticketChange models.TicketChange) error
+	GetTicketChanges(ctx context.Context, creatorID int64) ([]models.TicketChange, error)
 }

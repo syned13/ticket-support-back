@@ -22,3 +22,11 @@ CREATE TABLE IF NOT EXISTS tickets (
     updated_at TIMESTAMP NOT NULL,
     resolved_at TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS tickets_changes (
+    id SERIAL PRIMARY KEY,
+    ticket_id INT NOT NULL REFERENCES tickets (id),
+    creator_id INT NOT NULL REFERENCES users (id),
+    to_status TEXT NOT NULL,
+    changed_at TIMESTAMP NOT NULL
+);

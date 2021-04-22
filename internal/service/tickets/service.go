@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/syned13/ticket-support-back/internal/models"
+	repository "github.com/syned13/ticket-support-back/internal/repositories/tickets"
 	ticketsRepository "github.com/syned13/ticket-support-back/internal/repositories/tickets"
 	usersRepository "github.com/syned13/ticket-support-back/internal/repositories/users"
 	"github.com/syned13/ticket-support-back/pkg/httputils"
@@ -18,6 +20,15 @@ var (
 	ErrMissingStatus      = httputils.NewBadRequestError("missing status")
 	ErrMissingPriority    = httputils.NewBadRequestError("missing priority")
 	ErrInvalidTicketType  = httputils.NewBadRequestError("invalid type")
+	ErrInvalidOwnerID     = httputils.NewBadRequestError("invalid owner id")
+	ErrInvalidStatus      = httputils.NewBadRequestError("invalid status")
+
+	// ErrMissingPatchOperation missing patch operation
+	ErrMissingPatchOperation = httputils.NewBadRequestError("missing patch operation")
+	// ErrMissingPatchPath missing patch path
+	ErrMissingPatchPath = httputils.NewBadRequestError("missing patch path")
+	// ErrMissingPatchValue missing patch value
+	ErrMissingPatchValue = httputils.NewBadRequestError("missing patch value")
 
 	ErrMissingCreatorID = errors.New("missing priority")
 )
@@ -106,6 +117,7 @@ func (s service) GetTickets(ctx context.Context, userID int64, userType models.U
 }
 
 func (s service) GetTicket(ctx context.Context, ticketID int64) (models.Ticket, error) {
+	// TODO: only the own creator or an admin can get a ticket
 	ticket, err := s.ticketsRepo.GetTicket(ctx, ticketID)
 	if errors.Is(err, ticketsRepository.ErrNotFound) {
 		return models.Ticket{}, httputils.NewNotFoundError("ticket")
@@ -116,4 +128,83 @@ func (s service) GetTicket(ctx context.Context, ticketID int64) (models.Ticket, 
 	}
 
 	return ticket, nil
+}
+
+func (s service) UpdateTicket(ctx context.Context, request httputils.PatchRequest, ticketID int64) (models.Ticket, error) {
+	ticketChange := models.TicketChange{}
+	updatedStatus := false
+
+	ticket, err := s.ticketsRepo.GetTicket(ctx, ticketID)
+	if errors.Is(err, ticketsRepository.ErrNotFound) {
+		return models.Ticket{}, httputils.NewNotFoundError("ticket")
+	}
+
+	if err != nil {
+		return models.Ticket{}, err
+	}
+
+	ticketChange.TicketID = ticket.TicketID
+	ticketChange.CreatorID = ticket.CreatorID
+
+	// 	TODO: move this process to a new function to separate concerns
+	for _, op := range request {
+		if op.Op == "" {
+			return models.Ticket{}, ErrMissingPatchOperation
+		}
+
+		if op.Path == "" {
+			return models.Ticket{}, ErrMissingPatchPath
+		}
+
+		if op.Value == "" {
+			return models.Ticket{}, ErrMissingPatchValue
+		}
+
+		if op.Op != "update" { // TODO: remove maginc string
+			return models.Ticket{}, httputils.NewBadRequestError("invalid patch operation: " + op.Op)
+		}
+
+		switch op.Path {
+		case "ownerID":
+			id, ok := op.Value.(int64)
+			if !ok {
+				return models.Ticket{}, ErrInvalidOwnerID
+			}
+
+			ticket.OwnerID = &id
+		case "status":
+			status, ok := op.Value.(string)
+			if !ok {
+				return models.Ticket{}, ErrInvalidStatus
+			}
+
+			updatedStatus = true
+			// TODO: validate status, only valid statuses and only final statuses
+			ticket.Status = models.TicketStatus(status)
+			ticketChange.To = models.TicketStatus(status)
+		}
+	}
+
+	updatedTicket, err := s.ticketsRepo.UpdateTicket(ctx, ticket)
+	if errors.Is(err, ticketsRepository.ErrNotFound) {
+		return models.Ticket{}, httputils.NewNotFoundError("ticket")
+	}
+
+	if errors.Is(err, repository.ErrNothingToUpdate) {
+		return models.Ticket{}, httputils.NewBadRequestError("nothing to update")
+	}
+
+	if updatedStatus {
+		fmt.Println(ticketChange)
+		err = s.ticketsRepo.SaveTicketChange(ctx, ticketChange)
+		if err != nil {
+			fmt.Println("could not add change to change log")
+		}
+	}
+
+	return updatedTicket, nil
+}
+
+func (s service) GetTicketChanges(ctx context.Context, creatorID int64) ([]models.TicketChange, error) {
+	return s.ticketsRepo.GetTicketChanges(ctx, creatorID)
 }

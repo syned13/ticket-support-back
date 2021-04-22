@@ -33,9 +33,10 @@ const (
 type TicketStatus string
 
 const (
-	TicketTypePending    TicketStatus = "pending"
-	TicketTypeInProgress TicketStatus = "in_progress"
-	TicketStatusResolved TicketStatus = "resolved"
+	TicketTypePending     TicketStatus = "pending"
+	TicketTypeInProgress  TicketStatus = "in_progress"
+	TicketStatusResolved  TicketStatus = "resolved"
+	TicketStatusCancelled TicketStatus = "cancelled"
 )
 
 type TicketPriority int
@@ -61,6 +62,15 @@ type Ticket struct {
 	CreatedAt   *time.Time     `json:"createdAt" db:"created_at"`
 	UpdatedAt   *time.Time     `json:"updatedAt" db:"updated_at"`
 	ResolvedAt  *time.Time     `json:"resolvedAt,omitempty" db:"resolved_at"`
+}
+
+type TicketChange struct {
+	ChangeID  int64        `json:"id" db:"id"`
+	TicketID  int64        `json:"ticketID" db:"ticket_id"`
+	CreatorID int64        `json:"creatorID" db:"creator_id"`
+	ChangedBy int64        `json:"changedBy" db:"changed_by"`
+	To        TicketStatus `json:"toStatus" db:"to_status"`
+	ChangedAt time.Time    `json:"changed_at" db:"changed_at"`
 }
 
 func IsValidTicketType(ticketType TicketType) bool {

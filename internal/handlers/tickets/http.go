@@ -37,6 +37,7 @@ type HTTPHandler interface {
 	HandleCreateTicket(ctx context.Context) http.HandlerFunc
 	HandleGetTickets(ctx context.Context) http.HandlerFunc
 	HandleGetTicket(ctx context.Context) http.HandlerFunc
+	HandleGetChanges(ctx context.Context) http.HandlerFunc
 }
 
 type httpHandler struct {
@@ -49,6 +50,8 @@ func SetupRoutes(ctx context.Context, service ticketsService.Service, router *mu
 	router.HandleFunc("/tickets", authMiddleWare(handler.HandleCreateTicket(ctx))).Methods(http.MethodPost)
 	router.HandleFunc("/tickets", authMiddleWare(handler.HandleGetTickets(ctx))).Methods(http.MethodGet)
 	router.HandleFunc("/tickets/{id}", authMiddleWare(handler.HandleGetTicket(ctx))).Methods(http.MethodGet)
+	router.HandleFunc("/changes", authMiddleWare(handler.HandleGetChanges(ctx))).Methods(http.MethodGet)
+	router.HandleFunc("/tickets/{id}", authMiddleWare(handler.HandleUpdateTicket(ctx))).Methods(http.MethodPatch)
 }
 
 func (h httpHandler) HandleCreateTicket(ctx context.Context) http.HandlerFunc {
@@ -161,11 +164,77 @@ func (h httpHandler) HandleGetTicket(ctx context.Context) http.HandlerFunc {
 	}
 }
 
+func (h httpHandler) HandleUpdateTicket(ctx context.Context) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		err := validateContentType(*r)
+		if err != nil {
+			httputils.RespondWithError(rw, err)
+			return
+		}
+
+		vars := mux.Vars(r)
+
+		// TODO: take the sub from headers and verify the one requesting the ticket is either the creatoe or an admin
+		ticketIDStr := vars["id"]
+		if ticketIDStr == "" {
+			httputils.RespondWithError(rw, errors.New("missing ticket id"))
+			return
+		}
+
+		var ticketID int64
+		if id, err := strconv.ParseInt(ticketIDStr, 10, 64); err == nil {
+			ticketID = id
+		} else {
+			httputils.RespondWithError(rw, errors.New("invalid ticket id"))
+			return
+		}
+
+		patchRequest := httputils.PatchRequest{}
+		err = json.NewDecoder(r.Body).Decode(&patchRequest)
+		if err != nil {
+			httputils.RespondWithError(rw, ErrInvalidBody)
+			return
+		}
+
+		updatedTicket, err := h.service.UpdateTicket(ctx, patchRequest, ticketID)
+		if err != nil {
+			httputils.RespondWithError(rw, err)
+			return
+		}
+
+		httputils.RespondJSON(rw, http.StatusOK, updatedTicket)
+	}
+}
+
+func (h httpHandler) HandleGetChanges(ctx context.Context) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		userIDStr := r.Header.Get("sub")
+		var userID int64
+
+		if id, err := strconv.ParseInt(userIDStr, 10, 64); err == nil {
+			userID = id
+		} else {
+			fmt.Println("parsing_sub_failed: " + err.Error())
+			httputils.RespondWithError(rw, errors.New("invalid user id"))
+			return
+		}
+
+		changes, err := h.service.GetTicketChanges(ctx, userID)
+		if err != nil {
+			fmt.Println("getting_changes_failed: " + err.Error())
+			httputils.RespondWithError(rw, err)
+			return
+		}
+
+		httputils.RespondJSON(rw, http.StatusOK, changes)
+	}
+}
+
 func authMiddleWare(handler http.HandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		token, err := getToken(*r)
 		if err != nil {
-			fmt.Println("yes sir")
+			fmt.Println(err.Error())
 			httputils.RespondWithError(rw, err)
 			return
 		}

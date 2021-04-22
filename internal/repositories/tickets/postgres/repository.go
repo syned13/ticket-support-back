@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
@@ -105,6 +106,10 @@ func (r postgresRepository) GetTicket(ctx context.Context, ticketID int64) (mode
 		&ticket.ResolvedAt,
 	)
 
+	if errors.Is(err, pgx.ErrNoRows) {
+		return models.Ticket{}, repository.ErrNotFound
+	}
+
 	if err != nil {
 		return models.Ticket{}, err
 	}
@@ -159,6 +164,74 @@ func (r postgresRepository) GetTicketsByCreator(ctx context.Context, creatorID i
 }
 
 // UpdateTicket updates a ticket
-func (r postgresRepository) UpdateTicket(ctx context.Context, ticket models.Ticket) ([]models.Ticket, error) {
-	return nil, nil
+func (r postgresRepository) UpdateTicket(ctx context.Context, ticket models.Ticket) (models.Ticket, error) {
+	params := []interface{}{}
+	setStatements := []string{}
+	valuesCount := 0
+
+	if ticket.Status != "" {
+		valuesCount++
+		params = append(params, ticket.Status)
+		// setStatements = append(setStatements, fmt.Sprintf("ticket_status = $%d", valuesCount))
+		setStatements = append(setStatements, fmt.Sprintf("ticket_status = '%s'", ticket.Status))
+	}
+
+	if ticket.OwnerID != nil {
+		valuesCount++
+		params = append(params, ticket.Status)
+		// setStatements = append(setStatements, fmt.Sprintf("owner_id = $%d", valuesCount))
+		setStatements = append(setStatements, fmt.Sprintf("owner_id = '%d'", *ticket.OwnerID))
+	}
+
+	if valuesCount == 0 {
+		return models.Ticket{}, repository.ErrNothingToUpdate
+	}
+
+	setStatements = append(setStatements, "updated_at = NOW()")
+	params = append(params, ticket.TicketID)
+
+	query := fmt.Sprintf("UPDATE tickets SET %s WHERE id = %d RETURNING *", strings.Join(setStatements, ", "), ticket.TicketID)
+
+	updatedTicket := models.Ticket{}
+
+	_, err := r.pool.Exec(ctx, query)
+	if err != nil {
+		return models.Ticket{}, err
+	}
+
+	return updatedTicket, nil
+}
+
+func (r postgresRepository) SaveTicketChange(ctx context.Context, ticketChange models.TicketChange) error {
+	query := `INSERT INTO tickets_changes 
+			  (ticket_id, creator_id, to_status, changed_at) 
+			  VALUES ($1, $2, $3, NOW())`
+
+	_, err := r.pool.Exec(ctx, query, ticketChange.TicketID, ticketChange.CreatorID, ticketChange.To)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r postgresRepository) GetTicketChanges(ctx context.Context, creatorID int64) ([]models.TicketChange, error) {
+	query := `SELECT * FROM tickets_changes where creator_id = $1`
+
+	changes := []models.TicketChange{}
+
+	rows, err := r.pool.Query(ctx, query, creatorID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return changes, nil
+	}
+
+	if err := pgxscan.NewScanner(rows).Scan(&changes); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, repository.ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	return changes, nil
 }
