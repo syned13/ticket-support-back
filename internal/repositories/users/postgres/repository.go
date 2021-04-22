@@ -101,13 +101,20 @@ func (r postgresRepository) GetUserByEmail(ctx context.Context, email string) (m
 	query := `SELECT * FROM users WHERE email = $1`
 
 	rows := r.pool.QueryRow(ctx, query, email)
-	// if err != nil {
-	// 	return models.User{}, err
-	// }
 
 	user := models.User{}
 
 	err := rows.Scan(&user.UserID, &user.Name, &user.Email, &user.Password, &user.Type, &user.CreateAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return models.User{}, repository.ErrNotFound
+	}
+
+	if pgErr, ok := err.(*pgconn.PgError); ok {
+		if _, ok := errorCodes[pgErr.Code]; ok {
+			return models.User{}, errorCodes[pgErr.Code]
+		}
+	}
+
 	if err != nil {
 		return models.User{}, err
 	}
