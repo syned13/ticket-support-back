@@ -38,6 +38,7 @@ type HTTPHandler interface {
 	HandleGetTickets(ctx context.Context) http.HandlerFunc
 	HandleGetTicket(ctx context.Context) http.HandlerFunc
 	HandleGetChanges(ctx context.Context) http.HandlerFunc
+	HandlePreflightRequest() http.HandlerFunc
 }
 
 type httpHandler struct {
@@ -49,9 +50,26 @@ func SetupRoutes(ctx context.Context, service ticketsService.Service, router *mu
 
 	router.HandleFunc("/tickets", authMiddleWare(handler.HandleCreateTicket(ctx))).Methods(http.MethodPost)
 	router.HandleFunc("/tickets", authMiddleWare(handler.HandleGetTickets(ctx))).Methods(http.MethodGet)
+	router.HandleFunc("/tickets", handler.HandlePreflightRequest()).Methods(http.MethodOptions)
+
 	router.HandleFunc("/tickets/{id}", authMiddleWare(handler.HandleGetTicket(ctx))).Methods(http.MethodGet)
-	router.HandleFunc("/changes", authMiddleWare(handler.HandleGetChanges(ctx))).Methods(http.MethodGet)
 	router.HandleFunc("/tickets/{id}", authMiddleWare(handler.HandleUpdateTicket(ctx))).Methods(http.MethodPatch)
+	router.HandleFunc("/tickets/{id}", handler.HandlePreflightRequest()).Methods(http.MethodGet)
+
+	router.HandleFunc("/changes", authMiddleWare(handler.HandleGetChanges(ctx))).Methods(http.MethodGet)
+	router.HandleFunc("/changes", handler.HandlePreflightRequest()).Methods(http.MethodOptions)
+}
+
+func (h httpHandler) HandlePreflightRequest() http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		setupPreflightResponse(&rw, r)
+	}
+}
+
+func setupPreflightResponse(w *http.ResponseWriter, req *http.Request) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }
 
 func (h httpHandler) HandleCreateTicket(ctx context.Context) http.HandlerFunc {
