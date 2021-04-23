@@ -263,6 +263,11 @@ func (h httpHandler) HandleGetChanges(ctx context.Context) http.HandlerFunc {
 
 func authMiddleWare(handler http.HandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		setupPreflightResponse(&rw, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+
 		token, err := getToken(*r)
 		if err != nil {
 			fmt.Println(err.Error())

@@ -119,7 +119,7 @@ func (r postgresRepository) GetTicket(ctx context.Context, ticketID int64) (mode
 
 // GetTickets returns all the tickets
 func (r postgresRepository) GetTickets(ctx context.Context, lastID int64) ([]models.Ticket, int64, error) {
-	query := `SELECT * FROM tickets WHERE id > $1 ORDER BY id LIMIT 10`
+	query := `SELECT * FROM tickets WHERE id > $1 ORDER BY id LIMIT 1000`
 
 	rows, err := r.pool.Query(ctx, query, lastID)
 	if err != nil {
@@ -142,7 +142,7 @@ func (r postgresRepository) GetTickets(ctx context.Context, lastID int64) ([]mod
 
 // GetTicketsByCreator returns all the tickets made by a single person
 func (r postgresRepository) GetTicketsByCreator(ctx context.Context, creatorID int64, lastID int64) ([]models.Ticket, int64, error) {
-	query := `SELECT * FROM tickets WHERE creator_id = $1 AND id > $2 ORDER BY id LIMIT 10`
+	query := `SELECT * FROM tickets WHERE creator_id = $1 AND id > $2 ORDER BY id LIMIT 1000`
 
 	rows, err := r.pool.Query(ctx, query, creatorID, lastID)
 	if err != nil {
