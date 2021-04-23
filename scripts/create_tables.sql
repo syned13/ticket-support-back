@@ -11,6 +11,19 @@ INSERT INTO users
 (name, email, password, user_type, created_at)
 VALUES ('Erica Ross', 'erica@erica.com', '$2y$12$ZPmLiyARMnzTFZuvhj42y.7PyPh5TVQfvu4IGpPFOopAs4c9rA1km', 'admin', NOW());
 
+INSERT INTO users 
+(name, email, password, user_type, created_at)
+VALUES ('Denys Rosario', 'denys@denys.com', '$2y$12$ZPmLiyARMnzTFZuvhj42y.7PyPh5TVQfvu4IGpPFOopAs4c9rA1km', 'admin', NOW());
+
+INSERT INTO users 
+(name, email, password, user_type, created_at)
+VALUES ('Angelica Pena', 'angelica@angelica.com', '$2y$12$ZPmLiyARMnzTFZuvhj42y.7PyPh5TVQfvu4IGpPFOopAs4c9rA1km', 'admin', NOW());
+
+INSERT INTO users 
+(name, email, password, user_type, created_at)
+VALUES ('Leiscar Trinidad', 'leiscar@leiscar.com', '$2y$12$ZPmLiyARMnzTFZuvhj42y.7PyPh5TVQfvu4IGpPFOopAs4c9rA1km', 'admin', NOW());
+
+
 CREATE TABLE IF NOT EXISTS tickets (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,

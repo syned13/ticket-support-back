@@ -139,7 +139,7 @@ func (h httpHandler) HandleGetTickets(ctx context.Context) http.HandlerFunc {
 			return
 		}
 
-		userType := mux.Vars(r)["userType"]
+		userType := r.Header.Get("userType")
 
 		response, err := h.service.GetTickets(ctx, userID, models.UserType(userType), lastID)
 		if err != nil {
