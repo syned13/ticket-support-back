@@ -68,6 +68,11 @@ func (h httpHandler) HandleLogin(ctx context.Context) http.HandlerFunc {
 
 func (h httpHandler) HandleSignup(ctx context.Context) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			setupPreflightResponse(&rw, r)
+			return
+		}
+
 		err := validateContentType(*r)
 		if err != nil {
 			httputils.RespondWithError(rw, err)
