@@ -37,8 +37,9 @@ func SetupRoutes(ctx context.Context, service authService.Service, router *mux.R
 
 func (h httpHandler) HandleLogin(ctx context.Context) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		setupPreflightResponse(&rw, r)
+
 		if r.Method == http.MethodOptions {
-			setupPreflightResponse(&rw, r)
 			return
 		}
 
@@ -68,8 +69,9 @@ func (h httpHandler) HandleLogin(ctx context.Context) http.HandlerFunc {
 
 func (h httpHandler) HandleSignup(ctx context.Context) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		setupPreflightResponse(&rw, r)
+
 		if r.Method == http.MethodOptions {
-			setupPreflightResponse(&rw, r)
 			return
 		}
 

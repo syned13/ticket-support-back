@@ -74,6 +74,8 @@ func setupPreflightResponse(w *http.ResponseWriter, req *http.Request) {
 
 func (h httpHandler) HandleCreateTicket(ctx context.Context) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		setupPreflightResponse(&rw, r)
+
 		err := validateContentType(*r)
 		if err != nil {
 			httputils.RespondWithError(rw, err)
@@ -115,6 +117,8 @@ func (h httpHandler) HandleCreateTicket(ctx context.Context) http.HandlerFunc {
 
 func (h httpHandler) HandleGetTickets(ctx context.Context) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		setupPreflightResponse(&rw, r)
+
 		lastIDStr := r.URL.Query().Get("after_id")
 
 		var lastID int64 = 0
@@ -154,6 +158,8 @@ func (h httpHandler) HandleGetTickets(ctx context.Context) http.HandlerFunc {
 
 func (h httpHandler) HandleGetTicket(ctx context.Context) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		setupPreflightResponse(&rw, r)
+
 		vars := mux.Vars(r)
 
 		// TODO: take the sub from headers and verify the one requesting the ticket is either the creatoe or an admin
@@ -184,6 +190,11 @@ func (h httpHandler) HandleGetTicket(ctx context.Context) http.HandlerFunc {
 
 func (h httpHandler) HandleUpdateTicket(ctx context.Context) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		setupPreflightResponse(&rw, r)
+		if r.Method == http.MethodOptions {
+			return
+		}
+
 		err := validateContentType(*r)
 		if err != nil {
 			httputils.RespondWithError(rw, err)
@@ -226,6 +237,8 @@ func (h httpHandler) HandleUpdateTicket(ctx context.Context) http.HandlerFunc {
 
 func (h httpHandler) HandleGetChanges(ctx context.Context) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		setupPreflightResponse(&rw, r)
+
 		userIDStr := r.Header.Get("sub")
 		var userID int64
 
